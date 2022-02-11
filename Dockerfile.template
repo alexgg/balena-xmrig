@@ -1,0 +1,32 @@
+ARG ALPINE_VERSION=3.15
+FROM balenalib/%%BALENA_MACHINE_NAME%%-alpine:${ALPINE_VERSION} as builder
+
+RUN apk add --no-cache git \
+                       make \
+                       cmake \
+                       libstdc++ \
+                       gcc \
+                       g++ \
+                       hwloc-dev \
+                       libuv-dev \
+                       openssl-dev
+
+RUN git clone https://github.com/xmrig/xmrig.git && \
+    sed -i 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' xmrig/src/donate.h && \
+    sed -i 's/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g' xmrig/src/donate.h && \
+    mkdir xmrig/build && \
+    cd xmrig/build && \
+    cmake .. && \
+    make
+
+FROM balenalib/%%BALENA_MACHINE_NAME%%-alpine:${ALPINE_VERSION}
+
+RUN apk add --no-cache hwloc \
+                       libuv
+
+COPY entrypoint.sh /entrypoint.sh
+EXPOSE 80
+COPY --from=builder /xmrig/build/xmrig /xmrig/xmrig
+WORKDIR /tmp
+
+ENTRYPOINT ["/entrypoint.sh"]
