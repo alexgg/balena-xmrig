@@ -1,15 +1,9 @@
-ARG ALPINE_VERSION=3.15
-FROM balenalib/%%BALENA_MACHINE_NAME%%-alpine:${ALPINE_VERSION} as builder
+ARG VERSION=latest
+FROM balenalib/%%BALENA_MACHINE_NAME%%-ubuntu:${VERSION} as builder
 
-RUN apk add --no-cache git \
-                       make \
-                       cmake \
-                       libstdc++ \
-                       gcc \
-                       g++ \
-                       hwloc-dev \
-                       libuv-dev \
-                       openssl-dev
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y locales git build-essential cmake libuv1-dev uuid-dev nano libhwloc-dev libssl-dev
 
 RUN git clone https://github.com/xmrig/xmrig.git && \
     sed -i 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' xmrig/src/donate.h && \
@@ -19,10 +13,11 @@ RUN git clone https://github.com/xmrig/xmrig.git && \
     cmake .. && \
     make
 
-FROM balenalib/%%BALENA_MACHINE_NAME%%-alpine:${ALPINE_VERSION}
+FROM balenalib/%%BALENA_MACHINE_NAME%%-ubuntu:${VERSION}
 
-RUN apk add --no-cache hwloc \
-                       libuv
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y hwloc libuv1
 
 COPY entrypoint.sh /entrypoint.sh
 EXPOSE 80
